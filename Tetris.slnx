@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Tetris/Tetris.vcxproj" />
+  <Project Path="Tetris/Tetris.vcxproj" Id="0860eb7d-1337-4c0e-bcdb-6916ad0cb7b6" />
 </Solution>

@@ -31,6 +31,7 @@ protected:
     int rotates;
     int r_rotate;
 public:
+    string name;
     Figure(vector<Vector2int> _points, int _rotates, int _r_rotate) {
         points = _points;
         rotates = _rotates;
@@ -43,7 +44,7 @@ public:
     }
     virtual vector<Vector2int> getPoints() const = 0;
     // right rotate
-    virtual void rotate() = 0;
+    virtual void rotate(bool is_back = 0) = 0;
 };
 
 class Square : public Figure {
@@ -56,7 +57,7 @@ public:
     vector<Vector2int> getPoints() const{
         return points;
     }
-    void rotate() override {
+    void rotate(bool is_back = 0) override {
         // nothsing
     }
 };
@@ -66,20 +67,77 @@ public:
     Line() {
         points = { {0, 0}, {0, -1}, {0, -2}, {0, -3} };
         rotates = 2;
+        r_rotate = 2;
+    }
+    vector<Vector2int> getPoints() const {
+        return points;
+    }
+    void rotate(bool is_back = 0) override {
+        r_rotate = (r_rotate - 1 + (is_back ? -1 : 1) + rotates) % rotates + 1;
+        if      (r_rotate == 1) points = { {-1, 0}, {0, 0}, {1, 0}, {2, 0} };
+        else if (r_rotate == 2) points = { {0, 0}, {0, -1}, {0, -2}, {0, -3} };
+    }
+};
+
+class T_Form : public Figure {
+public:
+    T_Form() {
+        points = { {0, 0}, {-1, -1}, {0, -1}, {1, -1} };
+        rotates = 4;
         r_rotate = 1;
     }
     vector<Vector2int> getPoints() const {
         return points;
     }
-    void rotate() override {
-        if (r_rotate == 1) points = { {-1, 0}, {0, 0}, {1, 0}, {2, 0} };
-        else points = { {0, 0}, {0, -1}, {0, -2}, {0, -3} };
-        r_rotate = r_rotate%rotates + 1;
+    void rotate(bool is_back = 0) override {
+        r_rotate = (r_rotate - 1 + (is_back ? -1 : 1) + rotates) % rotates + 1;
+        if      (r_rotate == 1) points = { {0,0},{-1,0},{1,0},{0,1} };
+        else if (r_rotate == 2) points = { { 0, 0 }, { 0,1 }, { 0,-1 }, { -1,0 } };
+        else if (r_rotate == 3) points = { {0,0},{-1,0},{1,0},{0,-1} };
+        else if (r_rotate == 4) points = { {0,0},{0,1},{0,-1},{1,0} };
     }
 };
 
-Square square;
+class L_Form : public Figure {
+public:
+    L_Form() {
+        points = { {0, 0}, {0, -1}, {0, -2}, {0, -3} };
+        rotates = 2;
+        r_rotate = 1;
+    }
+    vector<Vector2int> getPoints() const {
+        return points;
+    }
+    void rotate(bool is_back = 0) override {
+        r_rotate = (r_rotate - 1 + (is_back ? -1 : 1) + rotates) % rotates + 1;
+        if (r_rotate == 1) points = { {-1, 0}, {0, 0}, {1, 0}, {2, 0} };
+        else points = { {0, 0}, {0, -1}, {0, -2}, {0, -3} };
+    }
+};
+
+
+int fig_count = 3;
+
+
 Line line;
+Square square;
+T_Form T_form;
+
+Figure& getRandFigure(int t) {
+    int r = (rand()+t) % fig_count;
+    if (r == 0) {
+        line = {};
+        return line;
+    }
+    if (r == 1) {
+        square = {};
+        return square;
+    }
+    if (r == 2) {
+        T_form = {};
+        return T_form;
+    }
+}
 
 
 
@@ -192,6 +250,7 @@ public:
         for (const Vector2int& i : f.getPoints()) {
             grid[start_pos.y + i.y][start_pos.x + i.x].setAll(0, 1, colors[current_color]);
         }
+
     }
 
 
@@ -260,7 +319,7 @@ public:
         }
     }
 
-    bool is_free(const Figure& f, Vector2int start_pos) {
+    bool is_free(const Figure& f, Vector2int start_pos, bool ignore_nstatic = 0) {
         bool k = 1;
         for (const Vector2int& i : f.getPoints()) {
             int lx = i.x + start_pos.x;
@@ -276,13 +335,23 @@ public:
         }
         return k;
     }
+
+    void del_all_nstatic() {
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (!grid[y][x].getStatic()) {
+                    grid[y][x].setAll(1, 0, DARKGRAY);
+                }
+            }
+        }
+    }
 };
 
 
 Vector2int spawnPoint = { 5, 30 };
 int main()
 {
-    int fps = 4;
+    int fps = 8;
     int height = 32;
     int width = 15;
     int cell_size = 30;
@@ -293,9 +362,9 @@ int main()
     g.getAt(2, 6).setAll(1, 1, colors[current_color]);
 
 
-    Figure& current_figure = line;
+    Figure* current_figure = &getRandFigure(tick);
     Vector2int figure_pos = spawnPoint;
-    g.drawFigure(current_figure, figure_pos);
+    g.drawFigure(*current_figure, figure_pos);
     bool is_live = 1;
     bool temp = 1;
 
@@ -311,18 +380,19 @@ int main()
         ClearBackground(RAYWHITE);
         if (!is_live) {
             figure_pos = spawnPoint;
-            if (!g.is_free(current_figure, figure_pos)) break;
+            
+            current_figure = &getRandFigure(tick);
+            if (!g.is_free(*current_figure, figure_pos)) break;
             current_color = rand() % 4;
-            g.drawFigure(current_figure, figure_pos);
-
+            g.drawFigure(*current_figure, figure_pos);
         }
 
-        if (IsKeyDown(KEY_LEFT) && g.is_free(current_figure, { figure_pos.x - 1, figure_pos.y })) {
+        if (IsKeyDown(KEY_LEFT) && g.is_free(*current_figure, { figure_pos.x - 1, figure_pos.y })) {
             figure_pos.x -= 1;
             g.move_left();
         }
 
-        if (IsKeyDown(KEY_RIGHT) && g.is_free(current_figure, { figure_pos.x + 1, figure_pos.y })) {
+        if (IsKeyDown(KEY_RIGHT) && g.is_free(*current_figure, { figure_pos.x + 1, figure_pos.y })) {
             figure_pos.x += 1;
             g.move_right();
         }
@@ -336,6 +406,17 @@ int main()
             temp = 1;
         }
 
+        if (IsKeyDown(KEY_UP) && tick % (fps / 8) == 0) {
+            current_figure->rotate();
+            if (g.is_free(*current_figure, figure_pos, 1)) {
+                g.del_all_nstatic();
+                g.drawFigure(*current_figure, figure_pos);
+            }
+            else {
+                current_figure->rotate(1);
+            }
+        }
+
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 DrawRectangle(10 + x * cell_size, 10 + y * cell_size, cell_size, cell_size, g.getAt(x, height - y - 1).getColor());
@@ -344,19 +425,19 @@ int main()
             }
         }
         g.ltick();
-        is_live = g.dtick(current_figure, figure_pos);
+        is_live = g.dtick(*current_figure, figure_pos);
         EndDrawing();
 
         g.del_ful_lines();
 
         tick++;
-        if (tick > (fps * 50 / (IsKeyDown(KEY_DOWN) * 3 + 1))) {
+        if (tick > (fps * 50 / (IsKeyDown(KEY_DOWN) * 3 + 1)) && fps != 16) {
             temp = 1;
             fps *= 2;
-            fps = min(fps, 64);
+            fps = min(fps, 16);
         }
     }
-    cout << "Haha loser >_<\n" << "Score: " << score << endl;
+    cout << "Ha-Ha loser >_<\n" << "Score: " << score << endl;
     CloseWindow();
 }
 
