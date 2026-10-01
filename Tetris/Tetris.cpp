@@ -389,10 +389,6 @@ int main()
     int cell_size = 30;
     Grid g = { height, width };
     InitWindow(width * cell_size + 20 + 250, height * cell_size + 20, "raylib");
-    g.getAt(2, 3).setAll(1, 1, colors[current_color]);
-
-    g.getAt(2, 6).setAll(1, 1, colors[current_color]);
-
 
     Figure* current_figure = &getRandFigure(tick);
     Vector2int figure_pos = spawnPoint;
@@ -459,6 +455,8 @@ int main()
         }
 
         string text = "SCORE " + to_string(score);
+
+        DrawText(text.c_str(), width * cell_size + 40, 50, 30, GREEN);
 
 
         g.ltick();
