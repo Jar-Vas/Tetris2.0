@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <string>
 #include "raylib.h"
 using namespace std;
 using f = float;
@@ -101,27 +102,50 @@ public:
 class L_Form : public Figure {
 public:
     L_Form() {
-        points = { {0, 0}, {0, -1}, {0, -2}, {0, -3} };
+        points = { {0, 0}, {0, -1}, {0, -2}, {1, -2} };
+        rotates = 4;
+        r_rotate = 4;
+    }
+    vector<Vector2int> getPoints() const {
+        return points;
+    }
+    void rotate(bool is_back = 0) override {
+        is_back = !is_back;
+        r_rotate = (r_rotate - 1 + (is_back ? -1 : 1) + rotates) % rotates + 1;
+        if (r_rotate == 1) points = { {-1,-1}, {0,-1}, {1,-1}, {-1,-2} };
+        else if (r_rotate == 2) points = { {0, 0}, {-1, 0}, {0,-1}, {0,-2} };
+        else if (r_rotate == 3) points = { {-1,-1}, {0,-1}, {1,-1}, {1, 0} };   
+        else if (r_rotate == 4) points = { {0, 0}, {0,-1}, {0,-2}, {1,-2} };
+    }
+};
+
+class S_Form : public Figure {
+public:
+    S_Form() {
+        points = { {0, 0}, {0, -1}, {-1, -1}, {-1, -2} };
         rotates = 2;
-        r_rotate = 1;
+        r_rotate = 2; 
     }
     vector<Vector2int> getPoints() const {
         return points;
     }
     void rotate(bool is_back = 0) override {
         r_rotate = (r_rotate - 1 + (is_back ? -1 : 1) + rotates) % rotates + 1;
-        if (r_rotate == 1) points = { {-1, 0}, {0, 0}, {1, 0}, {2, 0} };
-        else points = { {0, 0}, {0, -1}, {0, -2}, {0, -3} };
+        if (r_rotate == 1) points = { {-1,-1}, {0,-1}, {0,-2}, {1,-2} };
+        else if (r_rotate == 2) points = { {0, 0}, {0,-1}, {-1,-1}, {-1,-2} };
     }
 };
 
 
-int fig_count = 3;
+int fig_count = 5;
 
 
 Line line;
 Square square;
 T_Form T_form;
+L_Form L_form;
+S_Form S_form;
+
 
 Figure& getRandFigure(int t) {
     int r = (rand()+t) % fig_count;
@@ -136,6 +160,14 @@ Figure& getRandFigure(int t) {
     if (r == 2) {
         T_form = {};
         return T_form;
+    }
+    if (r == 3) {
+        L_form = {};
+        return L_form;
+    }
+    if (r == 4) {
+        S_form = {};
+        return S_form;
     }
 }
 
@@ -356,7 +388,7 @@ int main()
     int width = 15;
     int cell_size = 30;
     Grid g = { height, width };
-    InitWindow(width * cell_size + 20, height * cell_size + 20, "raylib");
+    InitWindow(width * cell_size + 20 + 250, height * cell_size + 20, "raylib");
     g.getAt(2, 3).setAll(1, 1, colors[current_color]);
 
     g.getAt(2, 6).setAll(1, 1, colors[current_color]);
@@ -378,6 +410,7 @@ int main()
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
+        DrawRectangle(width * cell_size + 10, 10, 250, height * cell_size, BLACK);
         if (!is_live) {
             figure_pos = spawnPoint;
             
@@ -406,7 +439,7 @@ int main()
             temp = 1;
         }
 
-        if (IsKeyDown(KEY_UP) && tick % (fps / 8) == 0) {
+        if (IsKeyDown(KEY_UP)) {
             current_figure->rotate();
             if (g.is_free(*current_figure, figure_pos, 1)) {
                 g.del_all_nstatic();
@@ -424,6 +457,10 @@ int main()
                 else DrawRectangleLines(10 + x * cell_size, 10 + y * cell_size, cell_size, cell_size, WHITE);
             }
         }
+
+        string text = "SCORE " + to_string(score);
+
+
         g.ltick();
         is_live = g.dtick(*current_figure, figure_pos);
         EndDrawing();
